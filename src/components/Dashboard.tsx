@@ -2,8 +2,6 @@ import React from 'react';
 import { Chain, ScheduledSession } from '../types';
 import { ChainCard } from './ChainCard';
 import { ThemeToggle } from './ThemeToggle';
-import { Plus } from 'lucide-react';
-
 interface DashboardProps {
   chains: Chain[];
   scheduledSessions: ScheduledSession[];
@@ -27,8 +25,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const getScheduledSession = (chainId: string) => {
     return scheduledSessions.find(session => session.chainId === chainId);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -36,11 +32,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex justify-end mb-6">
           <ThemeToggle variant="dropdown" showLabel />
         </div>
-        
-        <header className="text-center mb-16 animate-fade-in">
-          <div className="flex items-center justify-center space-x-4 mb-6">
-            <div className="w-16 h-16 rounded-3xl gradient-primary flex items-center justify-center shadow-xl">
-              <i className="fas fa-rocket text-white text-xl"></i>
+        {/* Theme toggle in header */}
+        <div className="flex justify-end mb-6">
             </div>
             <div>
               <h1 className="text-5xl md:text-6xl font-bold font-chinese text-gray-900 dark:text-slate-100 mb-2">

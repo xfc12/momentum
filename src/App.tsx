@@ -5,15 +5,6 @@ import { ChainEditor } from './components/ChainEditor';
 import { FocusMode } from './components/FocusMode';
 import { ChainDetail } from './components/ChainDetail';
 import { AuxiliaryJudgment } from './components/AuxiliaryJudgment';
-import { storage } from './utils/storage';
-import { isSessionExpired } from './utils/time';
-
-function App() {
-  const [state, setState] = useState<AppState>({
-    chains: [],
-    scheduledSessions: [],
-    activeSession: null,
-    currentView: 'dashboard',
     editingChain: null,
     viewingChainId: null,
     completionHistory: [],
@@ -50,15 +41,6 @@ function App() {
     const interval = setInterval(() => {
       setState(prev => {
         const now = Date.now();
-        const expiredSessions = prev.scheduledSessions.filter(
-          session => isSessionExpired(session.expiresAt)
-        );
-        const activeScheduledSessions = prev.scheduledSessions.filter(
-          session => !isSessionExpired(session.expiresAt)
-        );
-        
-        if (expiredSessions.length > 0) {
-          // Show auxiliary judgment for the first expired session
           setShowAuxiliaryJudgment(expiredSessions[0].chainId);
           storage.saveScheduledSessions(activeScheduledSessions);
           return { ...prev, scheduledSessions: activeScheduledSessions };
@@ -128,15 +110,6 @@ function App() {
   };
 
   const handleScheduleChain = (chainId: string) => {
-    // 检查是否已有该链的预约
-    const existingSchedule = state.scheduledSessions.find(s => s.chainId === chainId);
-    if (existingSchedule) return;
-
-    const chain = state.chains.find(c => c.id === chainId);
-    if (!chain) return;
-
-    const scheduledSession: ScheduledSession = {
-      chainId,
       scheduledAt: new Date(),
       expiresAt: new Date(Date.now() + chain.auxiliaryDuration * 60 * 1000), // Use chain's auxiliary duration
       auxiliarySignal: chain.auxiliarySignal,
@@ -178,15 +151,6 @@ function App() {
     const updatedScheduledSessions = state.scheduledSessions.filter(
       session => session.chainId !== chainId
     );
-
-    setState(prev => {
-      storage.saveActiveSession(activeSession);
-      storage.saveScheduledSessions(updatedScheduledSessions);
-      
-      return {
-        ...prev,
-        activeSession,
-        scheduledSessions: updatedScheduledSessions,
         currentView: 'focus',
       };
     });
@@ -257,15 +221,6 @@ function App() {
             }
           : c
       );
-
-      const updatedHistory = [...prev.completionHistory, completionRecord];
-      
-      storage.saveChains(updatedChains);
-      storage.saveActiveSession(null);
-      storage.saveCompletionHistory(updatedHistory);
-
-      return {
-        ...prev,
         chains: updatedChains,
         activeSession: null,
         completionHistory: updatedHistory,
@@ -295,15 +250,6 @@ function App() {
 
   const handleResumeSession = () => {
     if (!state.activeSession || !state.activeSession.pausedAt) return;
-
-    setState(prev => {
-      const pauseDuration = Date.now() - prev.activeSession!.pausedAt!.getTime();
-      const updatedSession = {
-        ...prev.activeSession!,
-        isPaused: false,
-        pausedAt: undefined,
-        totalPausedTime: prev.activeSession!.totalPausedTime + pauseDuration,
-      };
       
       storage.saveActiveSession(updatedSession);
       
@@ -333,15 +279,6 @@ function App() {
       
       storage.saveChains(updatedChains);
       storage.saveScheduledSessions(updatedScheduledSessions);
-      
-      return {
-        ...prev,
-        chains: updatedChains,
-        scheduledSessions: updatedScheduledSessions,
-      };
-    });
-    
-    setShowAuxiliaryJudgment(null);
   };
 
   const handleAuxiliaryJudgmentAllow = (chainId: string, exceptionRule: string) => {
@@ -394,15 +331,6 @@ function App() {
       
       return {
         ...prev,
-        chains: updatedChains,
-      };
-    });
-  };
-  const handleViewChainDetail = (chainId: string) => {
-    setState(prev => ({
-      ...prev,
-      currentView: 'detail',
-      viewingChainId: chainId,
     }));
   };
 
@@ -416,19 +344,6 @@ function App() {
   };
 
   const handleDeleteChain = (chainId: string) => {
-    setState(prev => {
-      // Remove the chain
-      const updatedChains = prev.chains.filter(chain => chain.id !== chainId);
-      
-      // Remove any scheduled sessions for this chain
-      const updatedScheduledSessions = prev.scheduledSessions.filter(
-        session => session.chainId !== chainId
-      );
-      
-      // Remove completion history for this chain
-      const updatedHistory = prev.completionHistory.filter(
-        history => history.chainId !== chainId
-      );
       
       // If currently active session belongs to this chain, clear it
       const updatedActiveSession = prev.activeSession?.chainId === chainId 
@@ -450,9 +365,6 @@ function App() {
         completionHistory: updatedHistory,
         activeSession: updatedActiveSession,
         currentView: updatedActiveSession ? prev.currentView : 'dashboard',
-        viewingChainId: prev.viewingChainId === chainId ? null : prev.viewingChainId,
-      };
-    });
   };
 
   // Render current view
@@ -466,8 +378,6 @@ function App() {
             onSave={handleSaveChain}
             onCancel={handleBackToDashboard}
           />
-          {showAuxiliaryJudgment && (
-            <AuxiliaryJudgment
               chain={state.chains.find(c => c.id === showAuxiliaryJudgment)!}
               onJudgmentFailure={(reason) => handleAuxiliaryJudgmentFailure(showAuxiliaryJudgment, reason)}
               onJudgmentAllow={(exceptionRule) => handleAuxiliaryJudgmentAllow(showAuxiliaryJudgment, exceptionRule)}
@@ -476,23 +386,6 @@ function App() {
           )}
         </>
       );
-
-    case 'focus':
-      const activeChain = state.chains.find(c => c.id === state.activeSession?.chainId);
-      if (!state.activeSession || !activeChain) {
-        handleBackToDashboard();
-        return null;
-      }
-      return (
-        <>
-          <FocusMode
-            session={state.activeSession}
-            chain={activeChain}
-            onComplete={handleCompleteSession}
-            onInterrupt={handleInterruptSession}
-            onAddException={handleAddException}
-            onPause={handlePauseSession}
-            onResume={handleResumeSession}
           />
           {showAuxiliaryJudgment && (
             <AuxiliaryJudgment
@@ -541,9 +434,6 @@ function App() {
             onStartChain={handleStartChain}
             onScheduleChain={handleScheduleChain}
             onViewChainDetail={handleViewChainDetail}
-            onCancelScheduledSession={handleCancelScheduledSession}
-            onDeleteChain={handleDeleteChain}
-          />
           {showAuxiliaryJudgment && (
             <AuxiliaryJudgment
               chain={state.chains.find(c => c.id === showAuxiliaryJudgment)!}
